@@ -64,6 +64,76 @@ print("zeros ", zeros)
 invalid = has_invalid_entries(binaryY)
 print("invalid ", invalid)
 
+
+# Create training and testing dataset
+def decompose_matrix_80_20(R, random_seed=None):
+    R = np.array(R)
+    A = np.zeros_like(R)
+    B = np.zeros_like(R)
+
+    if random_seed is not None:
+        np.random.seed(random_seed)
+
+    count_ones = 0
+
+    for i in range(R.shape[0]):
+        for j in range(R.shape[1]):
+            if R[i, j] == 1:
+                # Assign to A with 80% chance, else to B
+                if np.random.rand() < 0.8:
+                    A[i, j] = 1
+                else:
+                    B[i, j] = 1
+                count_ones += 1
+
+    return A, B
+
+def replace_with_half(Y, R):
+    # Ensure both are NumPy arrays
+    X = np.array(Y)
+    R = np.array(R)
+
+    # Validate shape compatibility
+    if X.shape != R.shape:
+        raise ValueError("Matrices Y and R must have the same shape.")
+
+    # Create a copy of X to avoid modifying original
+    result = Y.copy()
+
+    # Replace entries in X with 0.5 wherever R is 0
+    result[R == 0] = 0.5
+
+    return result
+
+
+# Testing
+A,B = decompose_matrix_80_20(R)
+Y_train = replace_with_half(binaryY,A)
+Y_test = replace_with_half(binaryY,B)
+
+#Test:
+print("make sure they add to original matrix R")
+print(np.all(A + B == R))
+
+# This is just for convenience
+new_train = Y_train.copy()
+new_test = Y_test.copy()
+new_original = binaryY.copy()
+
+# Replace 0s with -1
+new_train[Y_train == 0] = -1
+new_test[Y_test == 0] = -1
+new_original[binaryY == 0] = -1
+
+# Replace 0.5s with 0
+new_train[Y_train == 0.5] = 0
+new_test[Y_test == 0.5] = 0
+new_original[binaryY == 0.5] = 0
+
+print("make sure the actual recommendations add up to the original")
+
+print(np.all(new_train + new_test == new_original))
+
 def cofi_cost_func_v(X, W, b, Y, R, lambda_):
     """
     Binary classification cost function for collaborative filtering.
@@ -141,7 +211,7 @@ for iter in range(iterations):
     with tf.GradientTape() as tape:
 
         # Compute the cost (forward pass included in cost)
-        cost_value = cofi_cost_func_v(X, W, b, Y, R, lambda_)
+        cost_value = cofi_cost_func_v(X, W, b, Y_train, R, lambda_)
 
     # Use the gradient tape to automatically retrieve
     # the gradients of the trainable variables with respect to the loss
@@ -186,9 +256,38 @@ def matrix_predict(X, W, b):
     return binary_predictions
 
 # Make a prediction using trained weights and biases
-p = matrix_predict(X, W, b)
+P = matrix_predict(X, W, b)
 
+def compute_accuracy(P, Y_test, R):
+    # Ensure inputs are NumPy arrays
+    P = np.array(P)
+    Y_test = np.array(Y_test)
+    R = np.array(R)
 
+    # Validate shape compatibility
+    if not (P.shape == Y_test.shape == R.shape):
+        raise ValueError("All matrices must have the same shape.")
+
+    # Get mask of non-zero entries in R
+    mask = (R == 1)
+
+    # Extract corresponding values from P and Y_test
+    P_masked = P[mask]
+    Y_masked = Y_test[mask]
+
+    # Count matches where P == Y_test
+    matches = np.sum(P_masked == Y_masked)
+
+    # Total non-zero entries in R
+    total = np.sum(mask)
+
+    # Avoid division by zero
+    accuracy = matches / total if total > 0 else 0.0
+
+    return accuracy
+
+print("accuracy on test set")
+print(compute_accuracy(P,Y_test, B))
 
 
 

@@ -147,7 +147,7 @@ for iter in range(iterations):
     with tf.GradientTape() as tape:
 
         # Compute the cost (forward pass included in cost)
-        cost_value = cofi_cost_func_v(X, W, b, Y, R, lambda_)
+        cost_value = cofi_cost_func_v(X, W, b, binaryY, R, lambda_)
 
     # Use the gradient tape to automatically retrieve
     # the gradients of the trainable variables with respect to the loss
