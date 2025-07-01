@@ -14,7 +14,7 @@ gcloud builds submit --tag gcr.io/tindart-8c83b/my-python-app:latest .
 gcloud run jobs deploy my-python-job \ 
   --image gcr.io/tindart-8c83b/my-python-app:latest \
   --region us-central1 \
-  --max-retries 0 --memory 1Gi
+  --max-retries 0 --memory 1Gi --gpu=1
 ```
 
 ```sh
